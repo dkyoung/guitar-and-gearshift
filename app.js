@@ -16,8 +16,12 @@ const messageTitle = document.getElementById('message-title');
 const messageBody = document.getElementById('message-body');
 const restartButton = document.getElementById('restart-button');
 
-const ITEM_SIZE = 48;
-const PLAYER_BOTTOM_OFFSET = 16;
+const LANE_COUNT = 3;
+const PLAYER_BOTTOM_OFFSET = 18;
+const SAFE_START_DURATION = 1600;
+const INITIAL_SPAWN_DELAY = 950;
+const MIN_SPAWN_DELAY = 400;
+const SPAWN_ACCELERATION = 35;
 const INITIAL_STATUS = 'Grab 🎸 🎂 🎵, dodge 🕳️ 🚧, and use Arrow keys, A / D, or the buttons below.';
 const collectibles = [
   { emoji: '🎸', points: 10 },
@@ -35,13 +39,17 @@ const state = {
   running: false,
   animationId: null,
   spawnTimerId: null,
-  playerLane: 0,
+  playerLane: 1,
   playerX: 0,
   items: [],
   boardWidth: 0,
   boardHeight: 0,
+  itemSize: 60,
+  playerSize: 82,
   lanes: [],
-  spawnDelay: 700,
+  spawnDelay: INITIAL_SPAWN_DELAY,
+  gameStartTime: 0,
+  collisionsEnabledAt: 0,
 };
 
 function calculateAge(birthDateValue) {
@@ -100,7 +108,7 @@ function stopGameLoop() {
   }
 
   if (state.spawnTimerId) {
-    clearInterval(state.spawnTimerId);
+    clearTimeout(state.spawnTimerId);
     state.spawnTimerId = null;
   }
 }
@@ -132,15 +140,58 @@ function endGame(isWin) {
   );
 }
 
-function calculateLanes() {
+function syncBoardMetrics() {
+  const computed = window.getComputedStyle(document.documentElement);
   state.boardWidth = gameBoard.clientWidth;
   state.boardHeight = gameBoard.clientHeight;
+  state.playerSize = Number.parseFloat(computed.getPropertyValue('--player-size')) || 82;
+  state.itemSize = Number.parseFloat(computed.getPropertyValue('--item-size')) || 60;
+}
 
-  const laneCount = state.boardWidth < 340 ? 4 : 5;
-  const usableWidth = state.boardWidth - ITEM_SIZE;
-  const gap = laneCount > 1 ? usableWidth / (laneCount - 1) : 0;
+function scheduleNextSpawn() {
+  if (!state.running) {
+    return;
+  }
 
-  state.lanes = Array.from({ length: laneCount }, (_, index) => Math.round(index * gap));
+  state.spawnTimerId = window.setTimeout(() => {
+    spawnItem();
+
+    const elapsed = Date.now() - state.gameStartTime;
+    const difficultyReduction = Math.floor(elapsed / 2000) * SPAWN_ACCELERATION;
+    state.spawnDelay = Math.max(MIN_SPAWN_DELAY, INITIAL_SPAWN_DELAY - difficultyReduction);
+
+    scheduleNextSpawn();
+  }, state.spawnDelay);
+}
+
+function isSafeStartActive() {
+  return Date.now() < state.collisionsEnabledAt;
+}
+
+function getPlayerRect() {
+  return {
+    left: state.playerX,
+    right: state.playerX + state.playerSize,
+    top: state.boardHeight - state.playerSize - PLAYER_BOTTOM_OFFSET,
+    bottom: state.boardHeight - PLAYER_BOTTOM_OFFSET,
+  };
+}
+
+function calculateLanes() {
+  syncBoardMetrics();
+
+  if (!state.boardWidth || !state.boardHeight) {
+    state.lanes = [];
+    return;
+  }
+
+  const laneWidth = state.boardWidth / LANE_COUNT;
+
+  // Debug: lane coordinates are defined here for the fixed 3-lane road system.
+  state.lanes = Array.from({ length: LANE_COUNT }, (_, index) => {
+    const laneCenter = laneWidth * index + laneWidth / 2;
+    return Math.round(clamp(laneCenter - state.playerSize / 2, 0, state.boardWidth - state.playerSize));
+  });
 }
 
 function renderPlayer() {
@@ -148,7 +199,7 @@ function renderPlayer() {
     return;
   }
 
-  state.playerX = state.lanes[state.playerLane];
+  state.playerX = clamp(state.lanes[state.playerLane], 0, state.boardWidth - state.playerSize);
   playerCar.style.left = `${state.playerX}px`;
 }
 
@@ -161,13 +212,35 @@ function movePlayer(direction) {
   renderPlayer();
 }
 
-function spawnItem() {
+function pickSpawnLane() {
+  const laneIndexes = state.lanes.map((_, index) => index);
+
+  if (isSafeStartActive()) {
+    return laneIndexes.filter((laneIndex) => laneIndex !== state.playerLane);
+  }
+
+  return laneIndexes;
+}
+
+function spawnItem(forceCollectible = false) {
   if (!state.running || !state.lanes.length) {
     return;
   }
 
-  const isCollectible = Math.random() < 0.8;
-  const laneIndex = Math.floor(Math.random() * state.lanes.length);
+  const spawnableLanes = pickSpawnLane();
+
+  if (!spawnableLanes.length) {
+    return;
+  }
+
+  const isCollectible = forceCollectible || Math.random() < 0.75;
+  const laneIndex = spawnableLanes[Math.floor(Math.random() * spawnableLanes.length)];
+  const laneWidth = state.boardWidth / LANE_COUNT;
+  const itemX = Math.round(clamp(
+    laneWidth * laneIndex + laneWidth / 2 - state.itemSize / 2,
+    0,
+    state.boardWidth - state.itemSize
+  ));
   const itemConfig = isCollectible
     ? collectibles[Math.floor(Math.random() * collectibles.length)]
     : { emoji: obstacles[Math.floor(Math.random() * obstacles.length)], points: 0 };
@@ -175,50 +248,47 @@ function spawnItem() {
   const element = document.createElement('div');
   element.className = 'falling-item';
   element.textContent = itemConfig.emoji;
-  element.style.left = `${state.lanes[laneIndex]}px`;
-  element.style.top = `-${ITEM_SIZE}px`;
+  element.style.left = `${itemX}px`;
+  element.style.top = `-${state.itemSize}px`;
   gameBoard.appendChild(element);
 
   state.items.push({
     element,
     laneIndex,
-    x: state.lanes[laneIndex],
-    y: -ITEM_SIZE,
-    speed: 3.1 + Math.random() * 1.7,
+    x: itemX,
+    y: -state.itemSize,
+    speed: 2.5 + Math.random() * 1.1 + Math.min(1.8, (INITIAL_SPAWN_DELAY - state.spawnDelay) / 260),
     type: isCollectible ? 'collectible' : 'obstacle',
     points: itemConfig.points,
   });
 }
 
 function isColliding(item) {
-  const playerRect = {
-    left: state.playerX,
-    right: state.playerX + ITEM_SIZE,
-    top: state.boardHeight - ITEM_SIZE - PLAYER_BOTTOM_OFFSET,
-    bottom: state.boardHeight - PLAYER_BOTTOM_OFFSET,
-  };
-
+  const playerRect = getPlayerRect();
   const itemRect = {
     left: item.x,
-    right: item.x + ITEM_SIZE,
+    right: item.x + state.itemSize,
     top: item.y,
-    bottom: item.y + ITEM_SIZE,
+    bottom: item.y + state.itemSize,
   };
 
   return !(
-    playerRect.right < itemRect.left ||
-    playerRect.left > itemRect.right ||
-    playerRect.bottom < itemRect.top ||
-    playerRect.top > itemRect.bottom
+    playerRect.right <= itemRect.left ||
+    playerRect.left >= itemRect.right ||
+    playerRect.bottom <= itemRect.top ||
+    playerRect.top >= itemRect.bottom
   );
 }
 
 function updateItems() {
+  const collisionsActive = !isSafeStartActive();
+
   state.items = state.items.filter((item) => {
     item.y += item.speed;
     item.element.style.top = `${item.y}px`;
 
-    if (isColliding(item)) {
+    // Debug: collision timing / safe-start logic is implemented here.
+    if (collisionsActive && isColliding(item)) {
       item.element.remove();
 
       if (item.type === 'obstacle') {
@@ -257,17 +327,25 @@ function gameLoop() {
 function startGame() {
   stopGameLoop();
   clearItems();
+  showScreen(gameScreen);
   calculateLanes();
   state.score = 0;
   state.targetScore = state.age * 10;
+  state.spawnDelay = INITIAL_SPAWN_DELAY;
+  state.gameStartTime = Date.now();
+  state.collisionsEnabledAt = state.gameStartTime + SAFE_START_DURATION;
+
+  // Debug: spawn position is set here so the player begins centered in a valid lane.
   state.playerLane = Math.floor(state.lanes.length / 2);
   renderPlayer();
+
+  // Debug: player size is controlled via CSS custom properties read in syncBoardMetrics().
   updateHud();
-  showScreen(gameScreen);
+  setStatus(`${state.firstName}, get ready! Hazards become dangerous in ${SAFE_START_DURATION / 1000} seconds.`);
 
   state.running = true;
-  spawnItem();
-  state.spawnTimerId = window.setInterval(spawnItem, state.spawnDelay);
+  spawnItem(true);
+  scheduleNextSpawn();
   gameLoop();
 }
 
@@ -326,16 +404,21 @@ restartButton.addEventListener('click', () => {
 });
 
 window.addEventListener('resize', () => {
-  if (!state.running) {
+  calculateLanes();
+
+  if (!state.lanes.length) {
     return;
   }
-
-  calculateLanes();
   state.playerLane = clamp(state.playerLane, 0, state.lanes.length - 1);
   renderPlayer();
 
   state.items.forEach((item) => {
-    item.x = state.lanes[clamp(item.laneIndex, 0, state.lanes.length - 1)];
+    const laneWidth = state.boardWidth / LANE_COUNT;
+    item.x = Math.round(clamp(
+      laneWidth * item.laneIndex + laneWidth / 2 - state.itemSize / 2,
+      0,
+      state.boardWidth - state.itemSize
+    ));
     item.element.style.left = `${item.x}px`;
   });
 });
