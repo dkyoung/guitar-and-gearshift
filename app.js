@@ -349,6 +349,25 @@ function gameLoop() {
   state.animationId = window.requestAnimationFrame(gameLoop);
 }
 
+function isEditableElement(element) {
+  if (!(element instanceof Element)) {
+    return false;
+  }
+
+  return Boolean(element.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])'));
+}
+
+function shouldHandleMovementKey(event) {
+  const key = event.key.toLowerCase();
+  const isMovementKey = key === 'arrowleft' || key === 'arrowright' || key === 'a' || key === 'd';
+
+  if (!isMovementKey) {
+    return false;
+  }
+
+  return state.running && !gameScreen.classList.contains('hidden') && !isEditableElement(document.activeElement);
+}
+
 function startGame() {
   stopGameLoop();
   clearItems();
@@ -398,15 +417,18 @@ setupForm.addEventListener('submit', (event) => {
 });
 
 window.addEventListener('keydown', (event) => {
+  if (!shouldHandleMovementKey(event)) {
+    return;
+  }
+
   const key = event.key.toLowerCase();
+  event.preventDefault();
 
   if (key === 'arrowleft' || key === 'a') {
-    event.preventDefault();
     movePlayer(-1);
   }
 
   if (key === 'arrowright' || key === 'd') {
-    event.preventDefault();
     movePlayer(1);
   }
 });
