@@ -18,6 +18,22 @@ Do not introduce frameworks, build tools, bundlers, transpilers, or new architec
 6. Assume the browser/screenshot tool is not available in this environment.
 7. Reason carefully about layout, collision boxes, element sizes, and lane positioning without visual access.
 
+## Privacy Rules
+1. Treat the entered full name and birth date as session-only inputs.
+2. Do not store personal data in:
+   - localStorage
+   - sessionStorage
+   - cookies
+   - IndexedDB
+   - URL parameters
+   - analytics tools
+   - external APIs
+   - backend services
+3. Do not add telemetry, tracking scripts, pixels, or third-party analytics unless explicitly requested.
+4. Do not transmit user-entered personal data off-device.
+5. Keep all birthday calculations in browser memory only for the active page session.
+6. If a future feature would require storing or sharing personal data, stop and require explicit approval first.
+
 ## Gameplay Principles
 1. The game must be clearly playable on both desktop and mobile browsers.
 2. Player movement must feel fair and readable.

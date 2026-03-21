@@ -25,10 +25,10 @@ const SPAWN_ACCELERATION = 35;
 const INITIAL_STATUS = 'Grab 🎸 🎂 🎵, dodge 🕳️ 🚧, and use Arrow keys, A / D, or the buttons below.';
 
 // Debug: effective hitboxes are tuned here so collisions match the visible emoji/art instead of full containers.
-const PLAYER_HITBOX_SCALE_X = 0.5;
-const PLAYER_HITBOX_SCALE_Y = 0.62;
-const ITEM_HITBOX_SCALE_X = 0.42;
-const ITEM_HITBOX_SCALE_Y = 0.48;
+const PLAYER_HITBOX_SCALE_X = 0.48;
+const PLAYER_HITBOX_SCALE_Y = 0.6;
+const ITEM_HITBOX_SCALE_X = 0.4;
+const ITEM_HITBOX_SCALE_Y = 0.45;
 const collectibles = [
   { emoji: '🎸', points: 10 },
   { emoji: '🎂', points: 15 },
