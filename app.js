@@ -42,6 +42,7 @@ const state = {
   age: 0,
   score: 0,
   targetScore: 0,
+  phase: 'setup',
   running: false,
   animationId: null,
   spawnTimerId: null,
@@ -120,6 +121,7 @@ function stopGameLoop() {
 }
 
 function showMessage(title, body, isWin) {
+  state.phase = 'gameover';
   messageTitle.textContent = title;
   messageTitle.className = isWin ? 'status-win' : 'status-loss';
   messageBody.textContent = body;
@@ -349,9 +351,30 @@ function gameLoop() {
   state.animationId = window.requestAnimationFrame(gameLoop);
 }
 
+function isEditableElement(element) {
+  if (!element) {
+    return false;
+  }
+
+  const tagName = element.tagName?.toLowerCase();
+  return element.isContentEditable || tagName === 'input' || tagName === 'textarea' || tagName === 'select';
+}
+
+function shouldHandleMovementKey(event) {
+  const key = event.key.toLowerCase();
+  const isMovementKey = key === 'arrowleft' || key === 'arrowright' || key === 'a' || key === 'd';
+
+  if (!isMovementKey) {
+    return false;
+  }
+
+  return state.phase === 'playing' && state.running && !isEditableElement(document.activeElement);
+}
+
 function startGame() {
   stopGameLoop();
   clearItems();
+  state.phase = 'playing';
   showScreen(gameScreen);
   calculateLanes();
   state.score = 0;
@@ -398,15 +421,18 @@ setupForm.addEventListener('submit', (event) => {
 });
 
 window.addEventListener('keydown', (event) => {
+  if (!shouldHandleMovementKey(event)) {
+    return;
+  }
+
   const key = event.key.toLowerCase();
+  event.preventDefault();
 
   if (key === 'arrowleft' || key === 'a') {
-    event.preventDefault();
     movePlayer(-1);
   }
 
   if (key === 'arrowright' || key === 'd') {
-    event.preventDefault();
     movePlayer(1);
   }
 });
@@ -422,6 +448,7 @@ moveRightButton.addEventListener('click', () => handleDirectionalButton(1));
 restartButton.addEventListener('click', () => {
   stopGameLoop();
   clearItems();
+  state.phase = 'setup';
   showScreen(setupScreen);
   setupForm.reset();
   setStatus(INITIAL_STATUS);
