@@ -1,5 +1,60 @@
 <!DOCTYPE html>
-<html>
-  <head><title>Test</title></head>
-  <body>Guitar & Gearshift</body>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Guitar &amp; Gearshift</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="panel" id="setup-screen">
+        <h1>🎸 Guitar &amp; Gearshift 🚗</h1>
+        <p class="intro">
+          Enter your birthday details, then dodge obstacles and collect good vibes on the road.
+        </p>
+
+        <form id="setup-form" class="setup-form">
+          <label>
+            <span>Full Name</span>
+            <input id="full-name" name="fullName" type="text" placeholder="Jamie Driver" required />
+          </label>
+
+          <label>
+            <span>Birth Date</span>
+            <input id="birth-date" name="birthDate" type="date" required />
+          </label>
+
+          <button type="submit" class="primary-button">Start Game</button>
+        </form>
+      </section>
+
+      <section class="panel hidden" id="game-screen">
+        <div class="hud">
+          <div><strong>Player:</strong> <span id="player-name">Player</span></div>
+          <div><strong>Score:</strong> <span id="score">0</span></div>
+          <div><strong>Target:</strong> <span id="target-score">0</span></div>
+        </div>
+
+        <div id="game-board" class="game-board" aria-label="Game board">
+          <div id="player-car" class="player-car" aria-hidden="true">🚗</div>
+        </div>
+
+        <div class="controls">
+          <button id="move-left" class="control-button" type="button" aria-label="Move left">⬅️ Left</button>
+          <button id="move-right" class="control-button" type="button" aria-label="Move right">Right ➡️</button>
+        </div>
+
+        <p class="help-text">Desktop: use Arrow keys or A / D. Mobile: tap the buttons.</p>
+      </section>
+
+      <section class="panel hidden" id="message-screen">
+        <h2 id="message-title">Game Over</h2>
+        <p id="message-body"></p>
+        <button id="restart-button" class="primary-button" type="button">Play Again</button>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
 </html>
