@@ -1,6 +1,5 @@
 const setupScreen = document.getElementById('setup-screen');
 const gameScreen = document.getElementById('game-screen');
-const messageScreen = document.getElementById('message-screen');
 const setupForm = document.getElementById('setup-form');
 const fullNameInput = document.getElementById('full-name');
 const birthDateInput = document.getElementById('birth-date');
@@ -12,9 +11,23 @@ const gameBoard = document.getElementById('game-board');
 const playerCar = document.getElementById('player-car');
 const moveLeftButton = document.getElementById('move-left');
 const moveRightButton = document.getElementById('move-right');
-const messageTitle = document.getElementById('message-title');
-const messageBody = document.getElementById('message-body');
+const pauseButton = document.getElementById('pause-button');
+const boardOverlay = document.getElementById('board-overlay');
+const overlayState = document.getElementById('overlay-state');
+const overlayTitle = document.getElementById('overlay-title');
+const overlayBody = document.getElementById('overlay-body');
+const overlayPlayer = document.getElementById('overlay-player');
+const overlayScore = document.getElementById('overlay-score');
+const overlayTarget = document.getElementById('overlay-target');
+const resumeButton = document.getElementById('resume-button');
 const restartButton = document.getElementById('restart-button');
+const resetButton = document.getElementById('reset-button');
+const cancelButton = document.getElementById('cancel-button');
+const exitButton = document.getElementById('exit-button');
+const stoppedActions = document.getElementById('stopped-actions');
+const stoppedRestartButton = document.getElementById('stopped-restart');
+const stoppedResetButton = document.getElementById('stopped-reset');
+const stoppedExitButton = document.getElementById('stopped-exit');
 
 const LANE_COUNT = 3;
 const PLAYER_BOTTOM_OFFSET = 18;
@@ -43,13 +56,21 @@ const collectibles = [
 ];
 const obstacles = ['🕳️', '🚧'];
 
+const PHASES = {
+  SETUP: 'setup',
+  PLAYING: 'playing',
+  PAUSED: 'paused',
+  GAMEOVER: 'gameover',
+  STOPPED: 'stopped',
+};
+
 const state = {
   fullName: '',
   firstName: '',
   age: 0,
   score: 0,
   targetScore: 0,
-  running: false,
+  phase: PHASES.SETUP,
   animationId: null,
   spawnTimerId: null,
   playerLane: 1,
@@ -63,6 +84,7 @@ const state = {
   spawnDelay: INITIAL_SPAWN_DELAY,
   gameStartTime: 0,
   collisionsEnabledAt: 0,
+  pauseStartedAt: 0,
 };
 
 function calculateAge(birthDateValue) {
@@ -88,21 +110,28 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
-function setStatus(message) {
+function setStatus(message, tone = '') {
   statusText.textContent = message;
+  statusText.classList.remove('status-win', 'status-loss');
+
+  if (tone) {
+    statusText.classList.add(tone);
+  }
 }
 
 function updateHud() {
   playerNameLabel.textContent = state.firstName;
   scoreLabel.textContent = state.score;
   targetScoreLabel.textContent = state.targetScore;
+}
 
+function updatePlayingStatus() {
   const pointsLeft = Math.max(state.targetScore - state.score, 0);
   setStatus(`${state.firstName}, collect ${pointsLeft} more points and avoid the hazards.`);
 }
 
 function showScreen(screenToShow) {
-  [setupScreen, gameScreen, messageScreen].forEach((screen) => {
+  [setupScreen, gameScreen].forEach((screen) => {
     screen.classList.toggle('hidden', screen !== screenToShow);
   });
 }
@@ -113,8 +142,6 @@ function clearItems() {
 }
 
 function stopGameLoop() {
-  state.running = false;
-
   if (state.animationId) {
     cancelAnimationFrame(state.animationId);
     state.animationId = null;
@@ -126,31 +153,104 @@ function stopGameLoop() {
   }
 }
 
-function showMessage(title, body, isWin) {
-  messageTitle.textContent = title;
-  messageTitle.className = isWin ? 'status-win' : 'status-loss';
-  messageBody.textContent = body;
-  showScreen(messageScreen);
+function setPhase(nextPhase) {
+  state.phase = nextPhase;
+  const isPlaying = nextPhase === PHASES.PLAYING;
+  pauseButton.textContent = isPlaying ? 'Pause' : 'Paused';
+  pauseButton.disabled = !isPlaying;
+  moveLeftButton.disabled = !isPlaying;
+  moveRightButton.disabled = !isPlaying;
+  stoppedActions.classList.toggle('hidden', nextPhase !== PHASES.STOPPED);
 }
 
-function endGame(isWin) {
-  stopGameLoop();
-  clearItems();
+function populateOverlay() {
+  overlayPlayer.textContent = state.fullName || state.firstName || 'Player';
+  overlayScore.textContent = state.score;
+  overlayTarget.textContent = state.targetScore;
+}
 
-  if (isWin) {
-    showMessage(
-      'You Win!',
-      `Happy Birthday, ${state.fullName}! You unlocked Age ${state.age}.`,
-      true
-    );
+// Debug: end-of-run overlay/card handling is managed here so the final board stays visible behind the summary.
+function showOverlay({ stateLabel, title, body, showResume = false }) {
+  populateOverlay();
+  overlayState.textContent = stateLabel;
+  overlayTitle.textContent = title;
+  overlayBody.textContent = body;
+  resumeButton.classList.toggle('hidden', !showResume);
+  boardOverlay.classList.remove('hidden');
+}
+
+function hideOverlay() {
+  boardOverlay.classList.add('hidden');
+}
+
+function resetGameBoardView() {
+  hideOverlay();
+  stoppedActions.classList.add('hidden');
+  setStatus(INITIAL_STATUS);
+}
+
+function freezeBoard(phase) {
+  stopGameLoop();
+  setPhase(phase);
+}
+
+// Debug: pause/resume state handling lives here so the board can freeze without losing the current run state.
+function pauseGame() {
+  if (state.phase !== PHASES.PLAYING) {
     return;
   }
 
-  showMessage(
-    'Crash!',
-    `${state.firstName}, your ride hit an obstacle. Final score: ${state.score}.`,
-    false
-  );
+  state.pauseStartedAt = Date.now();
+  freezeBoard(PHASES.PAUSED);
+  setStatus(`${state.firstName}, your ride is paused. Resume when you're ready.`);
+  showOverlay({
+    stateLabel: 'Paused',
+    title: 'Game Paused',
+    body: 'Take a breather, check the road, and resume when you want to keep driving.',
+    showResume: true,
+  });
+}
+
+function resumeGame() {
+  if (state.phase !== PHASES.PAUSED) {
+    return;
+  }
+
+  const pauseDuration = Date.now() - state.pauseStartedAt;
+  state.gameStartTime += pauseDuration;
+  state.collisionsEnabledAt += pauseDuration;
+  state.pauseStartedAt = 0;
+  hideOverlay();
+  setPhase(PHASES.PLAYING);
+  updatePlayingStatus();
+  scheduleNextSpawn();
+  gameLoop();
+}
+
+function showGameOverOverlay(isWin) {
+  const title = isWin ? 'Birthday Road Cleared!' : 'Crash!';
+  const body = isWin
+    ? `${state.firstName}, you reached your goal and unlocked Age ${state.age}.`
+    : `${state.firstName}, the ride is over, but your final board is still here to enjoy.`;
+
+  showOverlay({
+    stateLabel: isWin ? 'Run Complete' : 'Run Over',
+    title,
+    body,
+    showResume: false,
+  });
+}
+
+function endGame(isWin) {
+  freezeBoard(PHASES.GAMEOVER);
+  showGameOverOverlay(isWin);
+
+  if (isWin) {
+    setStatus(`Great driving, ${state.firstName}! Final score ${state.score}/${state.targetScore}.`, 'status-win');
+    return;
+  }
+
+  setStatus(`${state.firstName}, the crash ended this run. Final score ${state.score}/${state.targetScore}.`, 'status-loss');
 }
 
 function syncBoardMetrics() {
@@ -162,11 +262,15 @@ function syncBoardMetrics() {
 }
 
 function scheduleNextSpawn() {
-  if (!state.running) {
+  if (state.phase !== PHASES.PLAYING) {
     return;
   }
 
   state.spawnTimerId = window.setTimeout(() => {
+    if (state.phase !== PHASES.PLAYING) {
+      return;
+    }
+
     spawnItem();
 
     const elapsed = Date.now() - state.gameStartTime;
@@ -245,7 +349,7 @@ function renderPlayer() {
 }
 
 function movePlayer(direction) {
-  if (!state.running) {
+  if (state.phase !== PHASES.PLAYING) {
     return;
   }
 
@@ -264,7 +368,7 @@ function pickSpawnLane() {
 }
 
 function spawnItem(forceCollectible = false) {
-  if (!state.running || !state.lanes.length) {
+  if (state.phase !== PHASES.PLAYING || !state.lanes.length) {
     return;
   }
 
@@ -362,9 +466,8 @@ function updateItems() {
 
     // Debug: obstacle collision fairness is implemented here, while collectible pickups stay immediate.
     if (collisionsActive && item.type === 'obstacle' && isObstacleCrashCollision(item)) {
-      item.element.remove();
       endGame(false);
-      return false;
+      return true;
     }
 
     if (collisionsActive && item.type === 'collectible' && isColliding(item)) {
@@ -374,8 +477,10 @@ function updateItems() {
 
       if (state.score >= state.targetScore) {
         endGame(true);
+        return true;
       }
 
+      updatePlayingStatus();
       return false;
     }
 
@@ -389,7 +494,7 @@ function updateItems() {
 }
 
 function gameLoop() {
-  if (!state.running) {
+  if (state.phase !== PHASES.PLAYING) {
     return;
   }
 
@@ -413,7 +518,7 @@ function shouldHandleMovementKey(event) {
     return false;
   }
 
-  return state.running && !gameScreen.classList.contains('hidden') && !isEditableElement(document.activeElement);
+  return state.phase === PHASES.PLAYING && !gameScreen.classList.contains('hidden') && !isEditableElement(document.activeElement);
 }
 
 function startGame() {
@@ -426,6 +531,7 @@ function startGame() {
   state.spawnDelay = INITIAL_SPAWN_DELAY;
   state.gameStartTime = Date.now();
   state.collisionsEnabledAt = state.gameStartTime + SAFE_START_DURATION;
+  state.pauseStartedAt = 0;
 
   // Debug: spawn position is set here so the player begins centered in a valid lane.
   state.playerLane = Math.floor(state.lanes.length / 2);
@@ -434,8 +540,9 @@ function startGame() {
   // Debug: player size is controlled via CSS custom properties read in syncBoardMetrics().
   updateHud();
   setStatus(`${state.firstName}, get ready! Hazards become dangerous in ${SAFE_START_DURATION / 1000} seconds.`);
+  hideOverlay();
+  setPhase(PHASES.PLAYING);
 
-  state.running = true;
   spawnItem(true);
   scheduleNextSpawn();
   gameLoop();
@@ -443,6 +550,32 @@ function startGame() {
 
 function handleDirectionalButton(direction) {
   movePlayer(direction);
+}
+
+// Debug: restart/reset/exit behavior is grouped here so each action stays predictable from paused or finished runs.
+function restartRun() {
+  startGame();
+}
+
+function returnToSetup({ clearInputs }) {
+  stopGameLoop();
+  clearItems();
+  resetGameBoardView();
+  setPhase(PHASES.SETUP);
+  showScreen(setupScreen);
+
+  if (clearInputs) {
+    setupForm.reset();
+  }
+
+  fullNameInput.focus();
+}
+
+function cancelOverlay() {
+  hideOverlay();
+  stopGameLoop();
+  setPhase(PHASES.STOPPED);
+  setStatus(`${state.firstName}, the run is stopped. Restart to replay or exit to setup.`);
 }
 
 setupForm.addEventListener('submit', (event) => {
@@ -489,14 +622,15 @@ window.addEventListener('keydown', (event) => {
 
 moveLeftButton.addEventListener('click', () => handleDirectionalButton(-1));
 moveRightButton.addEventListener('click', () => handleDirectionalButton(1));
-restartButton.addEventListener('click', () => {
-  stopGameLoop();
-  clearItems();
-  showScreen(setupScreen);
-  setupForm.reset();
-  setStatus(INITIAL_STATUS);
-  fullNameInput.focus();
-});
+pauseButton.addEventListener('click', pauseGame);
+resumeButton.addEventListener('click', resumeGame);
+restartButton.addEventListener('click', restartRun);
+resetButton.addEventListener('click', () => returnToSetup({ clearInputs: true }));
+cancelButton.addEventListener('click', cancelOverlay);
+exitButton.addEventListener('click', () => returnToSetup({ clearInputs: false }));
+stoppedRestartButton.addEventListener('click', restartRun);
+stoppedResetButton.addEventListener('click', () => returnToSetup({ clearInputs: true }));
+stoppedExitButton.addEventListener('click', () => returnToSetup({ clearInputs: false }));
 
 window.addEventListener('resize', () => {
   calculateLanes();
@@ -504,6 +638,7 @@ window.addEventListener('resize', () => {
   if (!state.lanes.length) {
     return;
   }
+
   state.playerLane = clamp(state.playerLane, 0, state.lanes.length - 1);
   renderPlayer();
 
@@ -519,4 +654,5 @@ window.addEventListener('resize', () => {
 });
 
 setStatus(INITIAL_STATUS);
+setPhase(PHASES.SETUP);
 birthDateInput.max = new Date().toISOString().split('T')[0];
