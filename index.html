@@ -40,8 +40,43 @@
           Grab 🎸 🎂 🎵, dodge 🕳️ 🚧, and use Arrow keys, A / D, or the buttons below.
         </p>
 
+        <div class="action-bar">
+          <button id="pause-button" class="secondary-button" type="button">Pause</button>
+        </div>
+
         <div id="game-board" class="game-board" aria-label="Game board">
           <div id="player-car" class="player-car" aria-hidden="true">🚗</div>
+
+          <div id="board-overlay" class="board-overlay hidden" aria-live="polite">
+            <div class="overlay-card">
+              <p id="overlay-state" class="overlay-state">Paused</p>
+              <h2 id="overlay-title">Paused</h2>
+              <p id="overlay-body" class="overlay-body"></p>
+
+              <dl class="overlay-stats">
+                <div>
+                  <dt>Player</dt>
+                  <dd id="overlay-player">Player</dd>
+                </div>
+                <div>
+                  <dt>Final Score</dt>
+                  <dd id="overlay-score">0</dd>
+                </div>
+                <div>
+                  <dt>Target Score</dt>
+                  <dd id="overlay-target">0</dd>
+                </div>
+              </dl>
+
+              <div class="overlay-actions">
+                <button id="resume-button" class="primary-button" type="button">Resume</button>
+                <button id="restart-button" class="secondary-button" type="button">Restart</button>
+                <button id="reset-button" class="secondary-button" type="button">Reset</button>
+                <button id="cancel-button" class="secondary-button" type="button">Cancel</button>
+                <button id="exit-button" class="secondary-button" type="button">Exit</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="controls">
@@ -49,13 +84,13 @@
           <button id="move-right" class="control-button" type="button" aria-label="Move right">Right ➡️</button>
         </div>
 
-        <p class="help-text">Stay in lane, time your moves, and reach your birthday target score.</p>
-      </section>
+        <div id="stopped-actions" class="stopped-actions hidden">
+          <button id="stopped-restart" class="secondary-button" type="button">Restart</button>
+          <button id="stopped-reset" class="secondary-button" type="button">Reset</button>
+          <button id="stopped-exit" class="secondary-button" type="button">Exit</button>
+        </div>
 
-      <section class="panel hidden" id="message-screen">
-        <h2 id="message-title">Game Over</h2>
-        <p id="message-body"></p>
-        <button id="restart-button" class="primary-button" type="button">Play Again</button>
+        <p class="help-text">Stay in lane, time your moves, and reach your birthday target score.</p>
       </section>
     </main>
 

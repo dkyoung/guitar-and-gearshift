@@ -47,7 +47,7 @@ input {
 }
 
 .hidden {
-  display: none;
+  display: none !important;
 }
 
 h1,
@@ -91,12 +91,15 @@ p {
 }
 
 .primary-button,
+.secondary-button,
 .control-button {
   border: none;
   border-radius: 999px;
   padding: 12px 18px;
   cursor: pointer;
   transition: transform 0.15s ease, opacity 0.15s ease;
+  min-height: 48px;
+  touch-action: manipulation;
 }
 
 .primary-button {
@@ -105,16 +108,23 @@ p {
   font-weight: bold;
 }
 
+.secondary-button {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
 .control-button {
   background: var(--accent-2);
   color: #07242a;
   min-width: 120px;
-  touch-action: manipulation;
 }
 
 .primary-button:hover,
+.secondary-button:hover,
 .control-button:hover,
 .primary-button:focus-visible,
+.secondary-button:focus-visible,
 .control-button:focus-visible {
   transform: translateY(-1px);
   opacity: 0.95;
@@ -126,6 +136,12 @@ p {
   gap: 8px;
   margin-bottom: 18px;
   font-size: 0.95rem;
+}
+
+.action-bar {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
 }
 
 .game-board {
@@ -205,6 +221,65 @@ p {
   filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.28));
 }
 
+.board-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(10, 14, 24, 0.52);
+}
+
+.overlay-card {
+  width: min(100%, 360px);
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(16, 21, 34, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 18px 30px rgba(0, 0, 0, 0.28);
+}
+
+.overlay-state {
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-2);
+}
+
+.overlay-body {
+  color: #d5def2;
+  line-height: 1.45;
+}
+
+.overlay-stats {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.overlay-stats div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.overlay-stats dt,
+.overlay-stats dd {
+  margin: 0;
+}
+
+.overlay-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .controls {
   display: flex;
   justify-content: center;
@@ -212,9 +287,11 @@ p {
   margin: 18px 0 10px;
 }
 
-#message-body {
-  font-size: 1.1rem;
-  line-height: 1.5;
+.stopped-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .status-win {
@@ -248,11 +325,18 @@ p {
     height: 360px;
   }
 
+  .overlay-actions,
+  .stopped-actions {
+    grid-template-columns: 1fr;
+  }
+
   .controls {
     flex-direction: column;
   }
 
-  .control-button {
+  .control-button,
+  .secondary-button,
+  .primary-button {
     width: 100%;
   }
 }
