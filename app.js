@@ -23,6 +23,8 @@ const INITIAL_SPAWN_DELAY = 950;
 const MIN_SPAWN_DELAY = 400;
 const SPAWN_ACCELERATION = 35;
 const INITIAL_STATUS = 'Grab 🎸 🎂 🎵, dodge 🕳️ 🚧, and use Arrow keys, A / D, or the buttons below.';
+// Debug: obstacle collision fairness is tuned here so an obstacle must enter deeper into the player zone before crashing.
+const OBSTACLE_FATAL_ZONE_DEPTH = 0.35;
 
 // Debug: effective hitboxes are tuned here so collisions match the visible emoji/art instead of full containers.
 // Debug: player hitbox tuning keeps the car collision box centered inside the visible emoji/art.
@@ -307,10 +309,10 @@ function spawnItem(forceCollectible = false) {
   });
 }
 
-function isColliding(item) {
-  const playerRect = getPlayerRect();
+function getItemRect(item) {
   const itemHitboxScale = item.hitboxScale;
-  const itemRect = getCenteredHitbox(
+
+  return getCenteredHitbox(
     item.x,
     item.y,
     state.itemSize,
@@ -318,14 +320,37 @@ function isColliding(item) {
     itemHitboxScale.x,
     itemHitboxScale.y
   );
+}
+
+function areRectsOverlapping(rectA, rectB) {
+  return !(
+    rectA.right <= rectB.left ||
+    rectA.left >= rectB.right ||
+    rectA.bottom <= rectB.top ||
+    rectA.top >= rectB.bottom
+  );
+}
+
+function isColliding(item) {
+  const playerRect = getPlayerRect();
+  const itemRect = getItemRect(item);
 
   // Debug: collision overlap is calculated here using centered inner hitboxes.
-  return !(
-    playerRect.right <= itemRect.left ||
-    playerRect.left >= itemRect.right ||
-    playerRect.bottom <= itemRect.top ||
-    playerRect.top >= itemRect.bottom
-  );
+  return areRectsOverlapping(playerRect, itemRect);
+}
+
+function isObstacleCrashCollision(item) {
+  const playerRect = getPlayerRect();
+  const itemRect = getItemRect(item);
+
+  if (!areRectsOverlapping(playerRect, itemRect)) {
+    return false;
+  }
+
+  const playerHeight = playerRect.bottom - playerRect.top;
+  const fatalLineY = playerRect.top + playerHeight * OBSTACLE_FATAL_ZONE_DEPTH;
+
+  return itemRect.top >= fatalLineY;
 }
 
 function updateItems() {
@@ -335,15 +360,15 @@ function updateItems() {
     item.y += item.speed;
     item.element.style.top = `${item.y}px`;
 
-    // Debug: collision timing / safe-start logic is implemented here.
-    if (collisionsActive && isColliding(item)) {
+    // Debug: obstacle collision fairness is implemented here, while collectible pickups stay immediate.
+    if (collisionsActive && item.type === 'obstacle' && isObstacleCrashCollision(item)) {
       item.element.remove();
+      endGame(false);
+      return false;
+    }
 
-      if (item.type === 'obstacle') {
-        endGame(false);
-        return false;
-      }
-
+    if (collisionsActive && item.type === 'collectible' && isColliding(item)) {
+      item.element.remove();
       state.score += item.points;
       updateHud();
 
