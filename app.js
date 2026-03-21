@@ -25,10 +25,15 @@ const SPAWN_ACCELERATION = 35;
 const INITIAL_STATUS = 'Grab 🎸 🎂 🎵, dodge 🕳️ 🚧, and use Arrow keys, A / D, or the buttons below.';
 
 // Debug: effective hitboxes are tuned here so collisions match the visible emoji/art instead of full containers.
+// Debug: player hitbox tuning keeps the car collision box centered inside the visible emoji/art.
 const PLAYER_HITBOX_SCALE_X = 0.48;
 const PLAYER_HITBOX_SCALE_Y = 0.6;
-const ITEM_HITBOX_SCALE_X = 0.4;
-const ITEM_HITBOX_SCALE_Y = 0.45;
+// Debug: collectible hitbox tuning stays a bit forgiving so pickups still feel friendly.
+const COLLECTIBLE_HITBOX_SCALE = { x: 0.46, y: 0.5 };
+// Debug: pothole hitbox tuning stays close to the current collision feel.
+const POTHOLE_HITBOX_SCALE = { x: 0.4, y: 0.45 };
+// Debug: barrier hitbox tuning is smaller so crashes line up better with the visible barricade.
+const BARRIER_HITBOX_SCALE = { x: 0.24, y: 0.28 };
 const collectibles = [
   { emoji: '🎸', points: 10 },
   { emoji: '🎂', points: 15 },
@@ -199,6 +204,18 @@ function getPlayerRect() {
   );
 }
 
+function getItemHitboxScale(itemType, itemEmoji) {
+  if (itemType === 'collectible') {
+    return COLLECTIBLE_HITBOX_SCALE;
+  }
+
+  if (itemEmoji === '🕳️') {
+    return POTHOLE_HITBOX_SCALE;
+  }
+
+  return BARRIER_HITBOX_SCALE;
+}
+
 function calculateLanes() {
   syncBoardMetrics();
 
@@ -266,6 +283,10 @@ function spawnItem(forceCollectible = false) {
   const itemConfig = isCollectible
     ? collectibles[Math.floor(Math.random() * collectibles.length)]
     : { emoji: obstacles[Math.floor(Math.random() * obstacles.length)], points: 0 };
+  const itemHitboxScale = getItemHitboxScale(
+    isCollectible ? 'collectible' : 'obstacle',
+    itemConfig.emoji
+  );
 
   const element = document.createElement('div');
   element.className = 'falling-item';
@@ -281,19 +302,21 @@ function spawnItem(forceCollectible = false) {
     y: -state.itemSize,
     speed: 2.5 + Math.random() * 1.1 + Math.min(1.8, (INITIAL_SPAWN_DELAY - state.spawnDelay) / 260),
     type: isCollectible ? 'collectible' : 'obstacle',
+    hitboxScale: itemHitboxScale,
     points: itemConfig.points,
   });
 }
 
 function isColliding(item) {
   const playerRect = getPlayerRect();
+  const itemHitboxScale = item.hitboxScale;
   const itemRect = getCenteredHitbox(
     item.x,
     item.y,
     state.itemSize,
     state.itemSize,
-    ITEM_HITBOX_SCALE_X,
-    ITEM_HITBOX_SCALE_Y
+    itemHitboxScale.x,
+    itemHitboxScale.y
   );
 
   // Debug: collision overlap is calculated here using centered inner hitboxes.
