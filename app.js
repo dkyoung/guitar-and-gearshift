@@ -23,6 +23,12 @@ const INITIAL_SPAWN_DELAY = 950;
 const MIN_SPAWN_DELAY = 400;
 const SPAWN_ACCELERATION = 35;
 const INITIAL_STATUS = 'Grab 🎸 🎂 🎵, dodge 🕳️ 🚧, and use Arrow keys, A / D, or the buttons below.';
+
+// Debug: effective hitboxes are tuned here so collisions match the visible emoji/art instead of full containers.
+const PLAYER_HITBOX_SCALE_X = 0.56;
+const PLAYER_HITBOX_SCALE_Y = 0.7;
+const ITEM_HITBOX_SCALE_X = 0.52;
+const ITEM_HITBOX_SCALE_Y = 0.58;
 const collectibles = [
   { emoji: '🎸', points: 10 },
   { emoji: '🎂', points: 15 },
@@ -168,13 +174,29 @@ function isSafeStartActive() {
   return Date.now() < state.collisionsEnabledAt;
 }
 
-function getPlayerRect() {
+function getCenteredHitbox(x, y, width, height, scaleX, scaleY) {
+  const hitboxWidth = width * scaleX;
+  const hitboxHeight = height * scaleY;
+  const insetX = (width - hitboxWidth) / 2;
+  const insetY = (height - hitboxHeight) / 2;
+
   return {
-    left: state.playerX,
-    right: state.playerX + state.playerSize,
-    top: state.boardHeight - state.playerSize - PLAYER_BOTTOM_OFFSET,
-    bottom: state.boardHeight - PLAYER_BOTTOM_OFFSET,
+    left: x + insetX,
+    right: x + insetX + hitboxWidth,
+    top: y + insetY,
+    bottom: y + insetY + hitboxHeight,
   };
+}
+
+function getPlayerRect() {
+  return getCenteredHitbox(
+    state.playerX,
+    state.boardHeight - state.playerSize - PLAYER_BOTTOM_OFFSET,
+    state.playerSize,
+    state.playerSize,
+    PLAYER_HITBOX_SCALE_X,
+    PLAYER_HITBOX_SCALE_Y
+  );
 }
 
 function calculateLanes() {
@@ -265,13 +287,16 @@ function spawnItem(forceCollectible = false) {
 
 function isColliding(item) {
   const playerRect = getPlayerRect();
-  const itemRect = {
-    left: item.x,
-    right: item.x + state.itemSize,
-    top: item.y,
-    bottom: item.y + state.itemSize,
-  };
+  const itemRect = getCenteredHitbox(
+    item.x,
+    item.y,
+    state.itemSize,
+    state.itemSize,
+    ITEM_HITBOX_SCALE_X,
+    ITEM_HITBOX_SCALE_Y
+  );
 
+  // Debug: collision overlap is calculated here using centered inner hitboxes.
   return !(
     playerRect.right <= itemRect.left ||
     playerRect.left >= itemRect.right ||
