@@ -349,6 +349,33 @@ function gameLoop() {
   state.animationId = window.requestAnimationFrame(gameLoop);
 }
 
+function isEditableElement(element) {
+  if (!(element instanceof Element)) {
+    return false;
+  }
+
+  return Boolean(element.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])'));
+}
+
+function shouldHandleMovementKey(event) {
+  const key = event.key.toLowerCase();
+  const isMovementKey = key === 'arrowleft' || key === 'arrowright' || key === 'a' || key === 'd';
+
+  if (!isMovementKey) {
+    return false;
+  }
+
+  return state.running && !gameScreen.classList.contains('hidden') && !isEditableElement(document.activeElement);
+}
+
+function focusGameBoard() {
+  if (!gameBoard.hasAttribute('tabindex')) {
+    gameBoard.tabIndex = -1;
+  }
+
+  gameBoard.focus({ preventScroll: true });
+}
+
 function startGame() {
   stopGameLoop();
   clearItems();
@@ -367,6 +394,7 @@ function startGame() {
   // Debug: player size is controlled via CSS custom properties read in syncBoardMetrics().
   updateHud();
   setStatus(`${state.firstName}, get ready! Hazards become dangerous in ${SAFE_START_DURATION / 1000} seconds.`);
+  focusGameBoard();
 
   state.running = true;
   spawnItem(true);
@@ -398,15 +426,18 @@ setupForm.addEventListener('submit', (event) => {
 });
 
 window.addEventListener('keydown', (event) => {
+  if (!shouldHandleMovementKey(event)) {
+    return;
+  }
+
   const key = event.key.toLowerCase();
+  event.preventDefault();
 
   if (key === 'arrowleft' || key === 'a') {
-    event.preventDefault();
     movePlayer(-1);
   }
 
   if (key === 'arrowright' || key === 'd') {
-    event.preventDefault();
     movePlayer(1);
   }
 });
