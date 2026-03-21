@@ -54,8 +54,16 @@ p {
 }
 
 .intro,
-.help-text {
+.help-text,
+.status-text {
   color: #d5def2;
+}
+
+.status-text {
+  min-height: 2.8em;
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+  line-height: 1.45;
 }
 
 .setup-form {
@@ -162,6 +170,11 @@ p {
   left: calc(50% - 24px);
   z-index: 2;
   filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35));
+  transition: left 0.08s linear;
+}
+
+.falling-item {
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.25));
 }
 
 .controls {

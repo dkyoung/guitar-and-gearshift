@@ -29,3 +29,10 @@ No backend, API, database, cookies, or local storage are used.
 - Hitting an obstacle ends the game.
 - Reaching the target score wins the game.
 - A restart option is shown after both win and loss states.
+
+## Playability improvements
+
+- The car and falling items now snap to responsive lanes so the board stays fair on desktop and mobile sizes.
+- A live status line shows the remaining points needed while you play.
+- The game spawns the first item immediately, making each run start right away.
+- The birth date field is capped at today to prevent invalid future dates.

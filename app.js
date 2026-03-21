@@ -7,6 +7,7 @@ const birthDateInput = document.getElementById('birth-date');
 const playerNameLabel = document.getElementById('player-name');
 const scoreLabel = document.getElementById('score');
 const targetScoreLabel = document.getElementById('target-score');
+const statusText = document.getElementById('status-text');
 const gameBoard = document.getElementById('game-board');
 const playerCar = document.getElementById('player-car');
 const moveLeftButton = document.getElementById('move-left');
@@ -15,14 +16,15 @@ const messageTitle = document.getElementById('message-title');
 const messageBody = document.getElementById('message-body');
 const restartButton = document.getElementById('restart-button');
 
+const ITEM_SIZE = 48;
+const PLAYER_BOTTOM_OFFSET = 16;
+const INITIAL_STATUS = 'Grab 🎸 🎂 🎵, dodge 🕳️ 🚧, and use Arrow keys, A / D, or the buttons below.';
 const collectibles = [
   { emoji: '🎸', points: 10 },
   { emoji: '🎂', points: 15 },
   { emoji: '🎵', points: 5 },
 ];
-
 const obstacles = ['🕳️', '🚧'];
-const lanePositions = [18, 86, 154, 222, 290, 358];
 
 const state = {
   fullName: '',
@@ -33,11 +35,13 @@ const state = {
   running: false,
   animationId: null,
   spawnTimerId: null,
+  playerLane: 0,
   playerX: 0,
   items: [],
   boardWidth: 0,
   boardHeight: 0,
-  moveStep: 28,
+  lanes: [],
+  spawnDelay: 700,
 };
 
 function calculateAge(birthDateValue) {
@@ -63,10 +67,17 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
+function setStatus(message) {
+  statusText.textContent = message;
+}
+
 function updateHud() {
   playerNameLabel.textContent = state.firstName;
   scoreLabel.textContent = state.score;
   targetScoreLabel.textContent = state.targetScore;
+
+  const pointsLeft = Math.max(state.targetScore - state.score, 0);
+  setStatus(`${state.firstName}, collect ${pointsLeft} more points and avoid the hazards.`);
 }
 
 function showScreen(screenToShow) {
@@ -111,13 +122,34 @@ function endGame(isWin) {
       `Happy Birthday, ${state.fullName}! You unlocked Age ${state.age}.`,
       true
     );
-  } else {
-    showMessage(
-      'Crash!',
-      `${state.firstName}, your ride hit an obstacle. Final score: ${state.score}.`,
-      false
-    );
+    return;
   }
+
+  showMessage(
+    'Crash!',
+    `${state.firstName}, your ride hit an obstacle. Final score: ${state.score}.`,
+    false
+  );
+}
+
+function calculateLanes() {
+  state.boardWidth = gameBoard.clientWidth;
+  state.boardHeight = gameBoard.clientHeight;
+
+  const laneCount = state.boardWidth < 340 ? 4 : 5;
+  const usableWidth = state.boardWidth - ITEM_SIZE;
+  const gap = laneCount > 1 ? usableWidth / (laneCount - 1) : 0;
+
+  state.lanes = Array.from({ length: laneCount }, (_, index) => Math.round(index * gap));
+}
+
+function renderPlayer() {
+  if (!state.lanes.length) {
+    return;
+  }
+
+  state.playerX = state.lanes[state.playerLane];
+  playerCar.style.left = `${state.playerX}px`;
 }
 
 function movePlayer(direction) {
@@ -125,17 +157,17 @@ function movePlayer(direction) {
     return;
   }
 
-  state.playerX = clamp(state.playerX + direction * state.moveStep, 0, state.boardWidth - 48);
-  playerCar.style.left = `${state.playerX}px`;
+  state.playerLane = clamp(state.playerLane + direction, 0, state.lanes.length - 1);
+  renderPlayer();
 }
 
 function spawnItem() {
-  if (!state.running) {
+  if (!state.running || !state.lanes.length) {
     return;
   }
 
-  const isCollectible = Math.random() < 0.72;
-  const randomLane = lanePositions[Math.floor(Math.random() * lanePositions.length)];
+  const isCollectible = Math.random() < 0.8;
+  const laneIndex = Math.floor(Math.random() * state.lanes.length);
   const itemConfig = isCollectible
     ? collectibles[Math.floor(Math.random() * collectibles.length)]
     : { emoji: obstacles[Math.floor(Math.random() * obstacles.length)], points: 0 };
@@ -143,15 +175,16 @@ function spawnItem() {
   const element = document.createElement('div');
   element.className = 'falling-item';
   element.textContent = itemConfig.emoji;
-  element.style.left = `${clamp(randomLane, 0, state.boardWidth - 48)}px`;
-  element.style.top = '-48px';
+  element.style.left = `${state.lanes[laneIndex]}px`;
+  element.style.top = `-${ITEM_SIZE}px`;
   gameBoard.appendChild(element);
 
   state.items.push({
     element,
-    x: parseFloat(element.style.left),
-    y: -48,
-    speed: 2.4 + Math.random() * 1.8,
+    laneIndex,
+    x: state.lanes[laneIndex],
+    y: -ITEM_SIZE,
+    speed: 3.1 + Math.random() * 1.7,
     type: isCollectible ? 'collectible' : 'obstacle',
     points: itemConfig.points,
   });
@@ -160,16 +193,16 @@ function spawnItem() {
 function isColliding(item) {
   const playerRect = {
     left: state.playerX,
-    right: state.playerX + 48,
-    top: state.boardHeight - 64,
-    bottom: state.boardHeight - 16,
+    right: state.playerX + ITEM_SIZE,
+    top: state.boardHeight - ITEM_SIZE - PLAYER_BOTTOM_OFFSET,
+    bottom: state.boardHeight - PLAYER_BOTTOM_OFFSET,
   };
 
   const itemRect = {
     left: item.x,
-    right: item.x + 48,
+    right: item.x + ITEM_SIZE,
     top: item.y,
-    bottom: item.y + 48,
+    bottom: item.y + ITEM_SIZE,
   };
 
   return !(
@@ -218,29 +251,33 @@ function gameLoop() {
   }
 
   updateItems();
-  state.animationId = requestAnimationFrame(gameLoop);
+  state.animationId = window.requestAnimationFrame(gameLoop);
 }
 
 function startGame() {
+  stopGameLoop();
+  clearItems();
+  calculateLanes();
   state.score = 0;
   state.targetScore = state.age * 10;
-  state.boardWidth = gameBoard.clientWidth;
-  state.boardHeight = gameBoard.clientHeight;
-  state.playerX = (state.boardWidth / 2) - 24;
-  playerCar.style.left = `${state.playerX}px`;
-  clearItems();
+  state.playerLane = Math.floor(state.lanes.length / 2);
+  renderPlayer();
   updateHud();
   showScreen(gameScreen);
 
   state.running = true;
-  state.spawnTimerId = setInterval(spawnItem, 900);
+  spawnItem();
+  state.spawnTimerId = window.setInterval(spawnItem, state.spawnDelay);
   gameLoop();
+}
+
+function handleDirectionalButton(direction) {
+  movePlayer(direction);
 }
 
 setupForm.addEventListener('submit', (event) => {
   event.preventDefault();
 
-  // Personalization happens here: values are read from the form and kept only in memory.
   const fullName = fullNameInput.value.trim();
   const birthDate = birthDateInput.value;
   const age = calculateAge(birthDate);
@@ -254,7 +291,6 @@ setupForm.addEventListener('submit', (event) => {
   state.firstName = extractFirstName(fullName);
   state.age = age;
 
-  // Core game targets are personalized from the player age.
   startGame();
 });
 
@@ -262,20 +298,30 @@ window.addEventListener('keydown', (event) => {
   const key = event.key.toLowerCase();
 
   if (key === 'arrowleft' || key === 'a') {
+    event.preventDefault();
     movePlayer(-1);
   }
 
   if (key === 'arrowright' || key === 'd') {
+    event.preventDefault();
     movePlayer(1);
   }
 });
 
-moveLeftButton.addEventListener('click', () => movePlayer(-1));
-moveRightButton.addEventListener('click', () => movePlayer(1));
+[moveLeftButton, moveRightButton].forEach((button) => {
+  button.addEventListener('touchstart', (event) => {
+    event.preventDefault();
+  }, { passive: false });
+});
+
+moveLeftButton.addEventListener('click', () => handleDirectionalButton(-1));
+moveRightButton.addEventListener('click', () => handleDirectionalButton(1));
 restartButton.addEventListener('click', () => {
   stopGameLoop();
+  clearItems();
   showScreen(setupScreen);
   setupForm.reset();
+  setStatus(INITIAL_STATUS);
   fullNameInput.focus();
 });
 
@@ -284,8 +330,15 @@ window.addEventListener('resize', () => {
     return;
   }
 
-  state.boardWidth = gameBoard.clientWidth;
-  state.boardHeight = gameBoard.clientHeight;
-  state.playerX = clamp(state.playerX, 0, state.boardWidth - 48);
-  playerCar.style.left = `${state.playerX}px`;
+  calculateLanes();
+  state.playerLane = clamp(state.playerLane, 0, state.lanes.length - 1);
+  renderPlayer();
+
+  state.items.forEach((item) => {
+    item.x = state.lanes[clamp(item.laneIndex, 0, state.lanes.length - 1)];
+    item.element.style.left = `${item.x}px`;
+  });
 });
+
+setStatus(INITIAL_STATUS);
+birthDateInput.max = new Date().toISOString().split('T')[0];
