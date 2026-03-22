@@ -233,12 +233,16 @@ p {
   align-items: center;
   justify-content: center;
   padding: 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: rgba(10, 14, 24, 0.52);
 }
 
 .overlay-card {
   width: min(100%, 360px);
+  max-height: 100%;
   padding: 18px;
+  overflow-y: auto;
   border-radius: 18px;
   background: rgba(16, 21, 34, 0.94);
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -359,6 +363,24 @@ p {
 
   .hud {
     grid-template-columns: 1fr;
+  }
+
+  .board-overlay {
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .overlay-card {
+    padding: 16px;
+  }
+
+  .overlay-stats {
+    margin: 14px 0;
+    gap: 8px;
+  }
+
+  .overlay-stats div {
+    padding: 9px 10px;
   }
 
   .overlay-actions,
