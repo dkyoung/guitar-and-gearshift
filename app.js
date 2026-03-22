@@ -19,6 +19,8 @@ const overlayBody = document.getElementById('overlay-body');
 const overlayPlayer = document.getElementById('overlay-player');
 const overlayScore = document.getElementById('overlay-score');
 const overlayTarget = document.getElementById('overlay-target');
+const shareButton = document.getElementById('share-button');
+const shareFeedback = document.getElementById('share-feedback');
 const resumeButton = document.getElementById('resume-button');
 const restartButton = document.getElementById('restart-button');
 const resetButton = document.getElementById('reset-button');
@@ -85,6 +87,7 @@ const state = {
   gameStartTime: 0,
   collisionsEnabledAt: 0,
   pauseStartedAt: 0,
+  lastRunWon: false,
 };
 
 function calculateAge(birthDateValue) {
@@ -169,17 +172,89 @@ function populateOverlay() {
   overlayTarget.textContent = state.targetScore;
 }
 
+function setShareFeedback(message = '') {
+  shareFeedback.textContent = message;
+  shareFeedback.classList.toggle('hidden', !message);
+}
+
+// Debug: share message is built here so completed runs use one short result summary in both native and fallback sharing.
+function buildShareMessage() {
+  const resultText = state.lastRunWon
+    ? `I cleared my run with ${state.score}/${state.targetScore} in Guitar & Gearshift!`
+    : `I scored ${state.score}/${state.targetScore} in Guitar & Gearshift.`;
+
+  return `${resultText} Can you beat it? Play here: https://dkyoung.github.io/guitar-and-gearshift/`;
+}
+
+async function copyShareMessage(message) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(message);
+    return;
+  }
+
+  const helper = document.createElement('textarea');
+  helper.value = message;
+  helper.setAttribute('readonly', '');
+  helper.style.position = 'absolute';
+  helper.style.left = '-9999px';
+  document.body.appendChild(helper);
+  helper.select();
+  const copied = document.execCommand('copy');
+  helper.remove();
+
+  if (!copied) {
+    throw new Error('Clipboard copy failed.');
+  }
+}
+
+// Debug: native share vs clipboard fallback is handled here so the end-of-run card works well on mobile and desktop browsers.
+async function shareResult() {
+  if (state.phase !== PHASES.GAMEOVER) {
+    return;
+  }
+
+  const shareMessage = buildShareMessage();
+  const shareData = {
+    text: shareMessage,
+    url: 'https://dkyoung.github.io/guitar-and-gearshift/',
+  };
+
+  setShareFeedback('');
+
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+      setShareFeedback('Share sheet opened. Thanks for spreading the birthday road challenge!');
+      return;
+    } catch (error) {
+      if (error && error.name === 'AbortError') {
+        return;
+      }
+    }
+  }
+
+  try {
+    await copyShareMessage(shareMessage);
+    setShareFeedback('Share text copied! Paste it into a message and challenge your friends.');
+  } catch (error) {
+    setShareFeedback('Sharing is unavailable here, but you can still tell friends to play the game link above.');
+  }
+}
+
 // Debug: end-of-run overlay/card handling is managed here so the final board stays visible behind the summary.
-function showOverlay({ stateLabel, title, body, showResume = false }) {
+function showOverlay({ stateLabel, title, body, showResume = false, showShare = false }) {
   populateOverlay();
   overlayState.textContent = stateLabel;
   overlayTitle.textContent = title;
   overlayBody.textContent = body;
   resumeButton.classList.toggle('hidden', !showResume);
+  shareButton.classList.toggle('hidden', !showShare);
+  setShareFeedback('');
   boardOverlay.classList.remove('hidden');
 }
 
 function hideOverlay() {
+  setShareFeedback('');
   boardOverlay.classList.add('hidden');
 }
 
@@ -208,6 +283,7 @@ function pauseGame() {
     title: 'Game Paused',
     body: 'Take a breather, check the road, and resume when you want to keep driving.',
     showResume: true,
+    showShare: false,
   });
 }
 
@@ -238,10 +314,12 @@ function showGameOverOverlay(isWin) {
     title,
     body,
     showResume: false,
+    showShare: true,
   });
 }
 
 function endGame(isWin) {
+  state.lastRunWon = isWin;
   freezeBoard(PHASES.GAMEOVER);
   showGameOverOverlay(isWin);
 
@@ -532,6 +610,7 @@ function startGame() {
   state.gameStartTime = Date.now();
   state.collisionsEnabledAt = state.gameStartTime + SAFE_START_DURATION;
   state.pauseStartedAt = 0;
+  state.lastRunWon = false;
 
   // Debug: spawn position is set here so the player begins centered in a valid lane.
   state.playerLane = Math.floor(state.lanes.length / 2);
@@ -629,6 +708,9 @@ bindMovementButton(moveLeftButton, -1);
 bindMovementButton(moveRightButton, 1);
 pauseButton.addEventListener('click', pauseGame);
 resumeButton.addEventListener('click', resumeGame);
+shareButton.addEventListener('click', () => {
+  void shareResult();
+});
 restartButton.addEventListener('click', restartRun);
 resetButton.addEventListener('click', () => returnToSetup({ clearInputs: true }));
 cancelButton.addEventListener('click', cancelOverlay);
