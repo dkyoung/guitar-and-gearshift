@@ -87,8 +87,8 @@ const AUDIO_ASSETS = {
   stings: {
     [AUDIO_STATES.WIN]: { src: 'audio/win-sting.mp3', volume: 0.68 },
     [AUDIO_STATES.CRASH]: { src: 'audio/crash-sting.mp3', volume: 0.72 },
-    // Debug: pickup sting asset is defined here so collectible grabs can layer over the gameplay loop.
-    [AUDIO_STATES.PICKUP]: { src: 'audio/pickup-sting.mp3', volume: 0.42, allowOverlap: true },
+    // Debug: pickup sting tuning stays here so collectible grabs can layer cleanly over the gameplay loop.
+    [AUDIO_STATES.PICKUP]: { src: 'audio/pickup-sting.mp3', volume: 0.34, allowOverlap: true },
   },
 };
 
@@ -109,6 +109,7 @@ const audioManager = {
   loopClips: new Map(),
   soundClips: new Map(),
   activeSoundClips: new Set(),
+  activePickupClips: new Set(),
 
   init() {
     const unlockAudio = () => {
@@ -243,8 +244,17 @@ const audioManager = {
       clipToPlay.pause();
       clipToPlay.currentTime = 0;
     } else {
+      // Debug: pickup overlap tuning keeps fast collectible chains audible without turning into a wall of sound.
+      if (stateKey === AUDIO_STATES.PICKUP) {
+        const activePickupCount = this.activePickupClips.size;
+        clipToPlay.volume = config.volume * Math.max(0.6, 1 - (activePickupCount * 0.18));
+        clipToPlay.playbackRate = 0.97 + (Math.random() * 0.06);
+        this.activePickupClips.add(clipToPlay);
+      }
+
       this.activeSoundClips.add(clipToPlay);
       clipToPlay.addEventListener('ended', () => {
+        this.activePickupClips.delete(clipToPlay);
         this.activeSoundClips.delete(clipToPlay);
       }, { once: true });
     }
