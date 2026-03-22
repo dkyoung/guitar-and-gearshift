@@ -34,12 +34,39 @@ input {
 }
 
 .app-shell {
+  position: relative;
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: max(12px, env(safe-area-inset-top)) max(12px, var(--shell-padding)) max(12px, env(safe-area-inset-bottom));
+}
+
+.utility-bar {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, var(--shell-padding));
+  z-index: 5;
+}
+
+.audio-toggle {
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(15, 21, 35, 0.76);
+  color: #dfe8ff;
+  font-size: 0.84rem;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.audio-toggle:hover,
+.audio-toggle:focus-visible {
+  background: rgba(20, 28, 45, 0.88);
 }
 
 .panel {
@@ -472,6 +499,21 @@ h2 {
 
   .app-shell {
     align-items: stretch;
+    padding-top: max(68px, calc(env(safe-area-inset-top) + 68px));
+  }
+
+  .utility-bar {
+    top: max(10px, env(safe-area-inset-top));
+    right: max(10px, var(--shell-padding));
+    left: max(10px, var(--shell-padding));
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .audio-toggle {
+    min-height: 44px;
+    padding: 10px 13px;
+    font-size: 0.8rem;
   }
 
   .panel {
