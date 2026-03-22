@@ -552,6 +552,17 @@ function handleDirectionalButton(direction) {
   movePlayer(direction);
 }
 
+function bindMovementButton(button, direction) {
+  const handler = () => handleDirectionalButton(direction);
+
+  if (window.PointerEvent) {
+    button.addEventListener('pointerup', handler);
+    return;
+  }
+
+  button.addEventListener('click', handler);
+}
+
 // Debug: restart/reset/exit behavior is grouped here so each action stays predictable from paused or finished runs.
 function restartRun() {
   startGame();
@@ -614,14 +625,8 @@ window.addEventListener('keydown', (event) => {
   }
 });
 
-[moveLeftButton, moveRightButton].forEach((button) => {
-  button.addEventListener('touchstart', (event) => {
-    event.preventDefault();
-  }, { passive: false });
-});
-
-moveLeftButton.addEventListener('click', () => handleDirectionalButton(-1));
-moveRightButton.addEventListener('click', () => handleDirectionalButton(1));
+bindMovementButton(moveLeftButton, -1);
+bindMovementButton(moveRightButton, 1);
 pauseButton.addEventListener('click', pauseGame);
 resumeButton.addEventListener('click', resumeGame);
 restartButton.addEventListener('click', restartRun);
