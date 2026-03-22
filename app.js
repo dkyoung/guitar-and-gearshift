@@ -30,6 +30,7 @@ const stoppedActions = document.getElementById('stopped-actions');
 const stoppedRestartButton = document.getElementById('stopped-restart');
 const stoppedResetButton = document.getElementById('stopped-reset');
 const stoppedExitButton = document.getElementById('stopped-exit');
+const audioToggleButton = document.getElementById('audio-toggle');
 
 const LANE_COUNT = 3;
 const PLAYER_BOTTOM_OFFSET = 18;
@@ -65,6 +66,201 @@ const PHASES = {
   PAUSED: 'paused',
   GAMEOVER: 'gameover',
   STOPPED: 'stopped',
+};
+
+const AUDIO_STATES = {
+  MENU: 'menu',
+  GAMEPLAY: 'gameplay',
+  PAUSED: 'paused',
+  WIN: 'win',
+  CRASH: 'crash',
+};
+
+// Debug: plug real audio files into these placeholder paths later without changing the audio state logic below.
+const AUDIO_ASSETS = {
+  loops: {
+    [AUDIO_STATES.MENU]: { src: 'audio/menu-loop.mp3', volume: 0.38 },
+    [AUDIO_STATES.GAMEPLAY]: { src: 'audio/gameplay-loop.mp3', volume: 0.44 },
+    [AUDIO_STATES.PAUSED]: { src: 'audio/paused-loop.mp3', volume: 0.24 },
+  },
+  stings: {
+    [AUDIO_STATES.WIN]: { src: 'audio/win-sting.mp3', volume: 0.68 },
+    [AUDIO_STATES.CRASH]: { src: 'audio/crash-sting.mp3', volume: 0.72 },
+  },
+};
+
+function createAudioClip({ src, volume }, { loop = false } = {}) {
+  const clip = new Audio(src);
+  clip.loop = loop;
+  clip.preload = 'none';
+  clip.volume = volume;
+  return clip;
+}
+
+const audioManager = {
+  hasInteracted: false,
+  isMuted: false,
+  desiredLoopState: AUDIO_STATES.MENU,
+  currentLoopState: '',
+  currentLoop: null,
+  loopClips: new Map(),
+  soundClips: new Map(),
+
+  init() {
+    const unlockAudio = () => {
+      if (this.hasInteracted) {
+        return;
+      }
+
+      this.hasInteracted = true;
+      document.removeEventListener('pointerdown', unlockAudio);
+      document.removeEventListener('keydown', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+
+      // Debug: setup/menu audio only starts after a user gesture so mobile autoplay rules are respected.
+      if (this.desiredLoopState) {
+        this.playLoop(this.desiredLoopState);
+      }
+    };
+
+    document.addEventListener('pointerdown', unlockAudio);
+    document.addEventListener('keydown', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio);
+    this.updateToggleButton();
+  },
+
+  getLoopClip(stateKey) {
+    const config = AUDIO_ASSETS.loops[stateKey];
+
+    if (!config) {
+      return null;
+    }
+
+    if (!this.loopClips.has(stateKey)) {
+      this.loopClips.set(stateKey, createAudioClip(config, { loop: true }));
+    }
+
+    return this.loopClips.get(stateKey);
+  },
+
+  getSoundClip(stateKey) {
+    const config = AUDIO_ASSETS.stings[stateKey];
+
+    if (!config) {
+      return null;
+    }
+
+    if (!this.soundClips.has(stateKey)) {
+      this.soundClips.set(stateKey, createAudioClip(config));
+    }
+
+    return this.soundClips.get(stateKey);
+  },
+
+  applyMuteState() {
+    const clips = [this.currentLoop, ...this.soundClips.values()].filter(Boolean);
+    clips.forEach((clip) => {
+      clip.muted = this.isMuted;
+    });
+  },
+
+  safePlay(clip) {
+    if (!clip) {
+      return;
+    }
+
+    try {
+      const playAttempt = clip.play();
+
+      if (playAttempt && typeof playAttempt.catch === 'function') {
+        playAttempt.catch(() => {
+          // Debug: missing placeholder files or blocked playback should fail silently until real audio is added.
+        });
+      }
+    } catch (error) {
+      // Debug: keep gameplay stable even if an audio file is missing or the browser blocks playback.
+    }
+  },
+
+  stopLoop() {
+    if (!this.currentLoop) {
+      return;
+    }
+
+    this.currentLoop.pause();
+    this.currentLoop.currentTime = 0;
+    this.currentLoop = null;
+    this.currentLoopState = '';
+  },
+
+  playLoop(stateKey) {
+    this.desiredLoopState = stateKey;
+
+    if (!this.hasInteracted) {
+      return;
+    }
+
+    const nextLoop = this.getLoopClip(stateKey);
+
+    if (!nextLoop) {
+      this.stopLoop();
+      return;
+    }
+
+    if (this.currentLoop === nextLoop) {
+      this.applyMuteState();
+      this.safePlay(nextLoop);
+      return;
+    }
+
+    this.stopLoop();
+    this.currentLoop = nextLoop;
+    this.currentLoopState = stateKey;
+    this.currentLoop.currentTime = 0;
+    this.applyMuteState();
+    this.safePlay(this.currentLoop);
+  },
+
+  playSound(stateKey) {
+    if (!this.hasInteracted) {
+      return;
+    }
+
+    const sound = this.getSoundClip(stateKey);
+
+    if (!sound) {
+      return;
+    }
+
+    sound.pause();
+    sound.currentTime = 0;
+    this.applyMuteState();
+    this.safePlay(sound);
+  },
+
+  // Debug: audio state switching is centralized here so setup, gameplay, pause, win, and crash all use one simple path.
+  transitionTo(stateKey) {
+    if (stateKey === AUDIO_STATES.WIN || stateKey === AUDIO_STATES.CRASH) {
+      this.stopLoop();
+      this.playSound(stateKey);
+      return;
+    }
+
+    this.playLoop(stateKey);
+  },
+
+  toggleMute() {
+    this.isMuted = !this.isMuted;
+    this.applyMuteState();
+    this.updateToggleButton();
+  },
+
+  // Debug: mute logic is kept in one place so the button always reflects whether every clip is muted.
+  updateToggleButton() {
+    audioToggleButton.textContent = this.isMuted ? 'Music: Off' : 'Music: On';
+    audioToggleButton.setAttribute('aria-pressed', String(this.isMuted));
+    audioToggleButton.setAttribute('aria-label', this.isMuted ? 'Turn music on' : 'Turn music off');
+  },
 };
 
 const state = {
@@ -281,6 +477,7 @@ function pauseGame() {
   }
 
   state.pauseStartedAt = Date.now();
+  audioManager.transitionTo(AUDIO_STATES.PAUSED);
   freezeBoard(PHASES.PAUSED);
   setStatus(`${state.firstName}, your ride is paused. Resume when you're ready.`);
   showOverlay({
@@ -298,6 +495,7 @@ function resumeGame() {
   }
 
   const pauseDuration = Date.now() - state.pauseStartedAt;
+  audioManager.transitionTo(AUDIO_STATES.GAMEPLAY);
   state.gameStartTime += pauseDuration;
   state.collisionsEnabledAt += pauseDuration;
   state.pauseStartedAt = 0;
@@ -325,6 +523,7 @@ function showGameOverOverlay(isWin) {
 
 function endGame(isWin) {
   state.lastRunWon = isWin;
+  audioManager.transitionTo(isWin ? AUDIO_STATES.WIN : AUDIO_STATES.CRASH);
   freezeBoard(PHASES.GAMEOVER);
   showGameOverOverlay(isWin);
 
@@ -608,6 +807,7 @@ function startGame() {
   stopGameLoop();
   clearItems();
   showScreen(gameScreen);
+  audioManager.transitionTo(AUDIO_STATES.GAMEPLAY);
   calculateLanes();
   state.score = 0;
   state.targetScore = state.age * 10;
@@ -656,6 +856,7 @@ function returnToSetup({ clearInputs }) {
   stopGameLoop();
   clearItems();
   resetGameBoardView();
+  audioManager.transitionTo(AUDIO_STATES.MENU);
   setPhase(PHASES.SETUP);
   showScreen(setupScreen);
 
@@ -669,6 +870,7 @@ function returnToSetup({ clearInputs }) {
 function cancelOverlay() {
   hideOverlay();
   stopGameLoop();
+  audioManager.transitionTo(AUDIO_STATES.MENU);
   setPhase(PHASES.STOPPED);
   setStatus(`${state.firstName}, the run is stopped. Restart to replay or exit to setup.`);
 }
@@ -711,6 +913,11 @@ window.addEventListener('keydown', (event) => {
 
 bindMovementButton(moveLeftButton, -1);
 bindMovementButton(moveRightButton, 1);
+audioManager.init();
+audioManager.transitionTo(AUDIO_STATES.MENU);
+audioToggleButton.addEventListener('click', () => {
+  audioManager.toggleMute();
+});
 pauseButton.addEventListener('click', pauseGame);
 resumeButton.addEventListener('click', resumeGame);
 shareButton.addEventListener('click', () => {
