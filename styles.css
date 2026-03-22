@@ -353,6 +353,18 @@ h2 {
   gap: 10px;
 }
 
+.share-button {
+  grid-column: 1 / -1;
+}
+
+.share-feedback {
+  min-height: 1.35em;
+  margin: 12px 2px 0;
+  color: #d5def2;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
 .controls {
   display: flex;
   justify-content: center;
@@ -470,6 +482,7 @@ h2 {
   }
 
   .overlay-card {
+    width: min(100%, 380px);
     padding: 16px;
   }
 
@@ -491,6 +504,7 @@ h2 {
   .primary-button {
     width: 100%;
   }
+
 
   .stopped-actions {
     grid-template-columns: 1fr;
