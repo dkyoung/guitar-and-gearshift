@@ -37,8 +37,10 @@ input {
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 12px;
   padding: max(12px, env(safe-area-inset-top)) max(12px, var(--shell-padding)) max(12px, env(safe-area-inset-bottom));
 }
 
@@ -82,6 +84,29 @@ h2 {
 .intro,
 .help-text {
   margin-bottom: 0;
+}
+
+.app-footer {
+  width: min(100%, var(--panel-max-width));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
+  color: #b9c6e4;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.app-footer a {
+  color: var(--accent-2);
+  text-decoration: none;
+}
+
+.app-footer a:hover,
+.app-footer a:focus-visible {
+  text-decoration: underline;
 }
 
 .status-text {
@@ -437,6 +462,7 @@ h2 {
 
   .app-shell {
     align-items: stretch;
+    justify-content: flex-start;
   }
 
   .panel {
@@ -452,6 +478,11 @@ h2 {
   .status-text,
   .help-text {
     font-size: 0.9rem;
+  }
+
+  .app-footer {
+    gap: 4px 8px;
+    font-size: 0.78rem;
   }
 
   .legend {
