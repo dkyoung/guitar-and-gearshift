@@ -74,6 +74,7 @@ const AUDIO_STATES = {
   PAUSED: 'paused',
   WIN: 'win',
   CRASH: 'crash',
+  PICKUP: 'pickup',
 };
 
 // Debug: plug real audio files into these placeholder paths later without changing the audio state logic below.
@@ -86,6 +87,8 @@ const AUDIO_ASSETS = {
   stings: {
     [AUDIO_STATES.WIN]: { src: 'audio/win-sting.mp3', volume: 0.68 },
     [AUDIO_STATES.CRASH]: { src: 'audio/crash-sting.mp3', volume: 0.72 },
+    // Debug: pickup sting asset is defined here so collectible grabs can layer over the gameplay loop.
+    [AUDIO_STATES.PICKUP]: { src: 'audio/pickup-sting.mp3', volume: 0.42, allowOverlap: true },
   },
 };
 
@@ -105,6 +108,7 @@ const audioManager = {
   currentLoop: null,
   loopClips: new Map(),
   soundClips: new Map(),
+  activeSoundClips: new Set(),
 
   init() {
     const unlockAudio = () => {
@@ -158,7 +162,7 @@ const audioManager = {
   },
 
   applyMuteState() {
-    const clips = [this.currentLoop, ...this.soundClips.values()].filter(Boolean);
+    const clips = [this.currentLoop, ...this.soundClips.values(), ...this.activeSoundClips].filter(Boolean);
     clips.forEach((clip) => {
       clip.muted = this.isMuted;
     });
@@ -227,15 +231,26 @@ const audioManager = {
     }
 
     const sound = this.getSoundClip(stateKey);
+    const config = AUDIO_ASSETS.stings[stateKey];
 
-    if (!sound) {
+    if (!sound || !config) {
       return;
     }
 
-    sound.pause();
-    sound.currentTime = 0;
+    const clipToPlay = config.allowOverlap ? createAudioClip(config) : sound;
+
+    if (!config.allowOverlap) {
+      clipToPlay.pause();
+      clipToPlay.currentTime = 0;
+    } else {
+      this.activeSoundClips.add(clipToPlay);
+      clipToPlay.addEventListener('ended', () => {
+        this.activeSoundClips.delete(clipToPlay);
+      }, { once: true });
+    }
+
     this.applyMuteState();
-    this.safePlay(sound);
+    this.safePlay(clipToPlay);
   },
 
   // Debug: audio state switching is centralized here so setup, gameplay, pause, win, and crash all use one simple path.
@@ -754,6 +769,8 @@ function updateItems() {
 
     if (collisionsActive && item.type === 'collectible' && isColliding(item)) {
       item.element.remove();
+      // Debug: pickup sound is triggered here exactly when a collectible is successfully collected.
+      audioManager.playSound(AUDIO_STATES.PICKUP);
       state.score += item.points;
       updateHud();
 
