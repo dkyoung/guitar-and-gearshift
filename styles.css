@@ -353,6 +353,10 @@ h2 {
   gap: 10px;
 }
 
+.share-button {
+  grid-column: 1 / -1;
+}
+
 .share-feedback {
   min-height: 1.35em;
   margin: 12px 2px 0;
@@ -501,9 +505,6 @@ h2 {
     width: 100%;
   }
 
-  .overlay-actions {
-    grid-template-columns: 1fr;
-  }
 
   .stopped-actions {
     grid-template-columns: 1fr;

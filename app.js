@@ -38,6 +38,7 @@ const INITIAL_SPAWN_DELAY = 950;
 const MIN_SPAWN_DELAY = 400;
 const SPAWN_ACCELERATION = 35;
 const INITIAL_STATUS = 'Grab 🎸 🎂 🎵, dodge 🕳️ 🚧, and use Arrow keys, A / D, or the buttons below.';
+const GAME_URL = 'https://dkyoung.github.io/guitar-and-gearshift/';
 // Debug: obstacle collision fairness is tuned here so an obstacle must enter deeper into the player zone before crashing.
 const OBSTACLE_FATAL_ZONE_DEPTH = 0.35;
 
@@ -178,12 +179,12 @@ function setShareFeedback(message = '') {
 }
 
 // Debug: share message is built here so completed runs use one short result summary in both native and fallback sharing.
-function buildShareMessage() {
+function buildShareMessage(includeLink = true) {
   const resultText = state.lastRunWon
     ? `I cleared my run with ${state.score}/${state.targetScore} in Guitar & Gearshift!`
     : `I scored ${state.score}/${state.targetScore} in Guitar & Gearshift.`;
 
-  return `${resultText} Can you beat it? Play here: https://dkyoung.github.io/guitar-and-gearshift/`;
+  return includeLink ? `${resultText} Can you beat it? Play here: ${GAME_URL}` : `${resultText} Can you beat it?`;
 }
 
 async function copyShareMessage(message) {
@@ -213,31 +214,35 @@ async function shareResult() {
     return;
   }
 
-  const shareMessage = buildShareMessage();
+  const shareText = buildShareMessage(false);
+  const shareMessage = buildShareMessage(true);
   const shareData = {
-    text: shareMessage,
-    url: 'https://dkyoung.github.io/guitar-and-gearshift/',
+    title: 'Guitar & Gearshift',
+    text: shareText,
+    url: GAME_URL,
   };
 
   setShareFeedback('');
-
-  if (navigator.share) {
-    try {
-      await navigator.share(shareData);
-      setShareFeedback('Share sheet opened. Thanks for spreading the birthday road challenge!');
-      return;
-    } catch (error) {
-      if (error && error.name === 'AbortError') {
-        return;
-      }
-    }
-  }
+  shareButton.disabled = true;
 
   try {
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (error) {
+        if (error && error.name === 'AbortError') {
+          return;
+        }
+      }
+    }
+
     await copyShareMessage(shareMessage);
     setShareFeedback('Share text copied! Paste it into a message and challenge your friends.');
   } catch (error) {
     setShareFeedback('Sharing is unavailable here, but you can still tell friends to play the game link above.');
+  } finally {
+    shareButton.disabled = false;
   }
 }
 
