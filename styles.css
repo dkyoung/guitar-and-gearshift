@@ -10,7 +10,7 @@
   --panel-max-width: 560px;
   --panel-padding: clamp(18px, 4vw, 24px);
   --road-width: 100%;
-  --board-height: clamp(360px, 56dvh, 420px);
+  --board-height: clamp(360px, min(58dvh, 92vw), 440px);
   --player-size: 82px;
   --item-size: 60px;
 }
@@ -161,7 +161,10 @@ h2 {
 }
 
 .legend {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 10px 12px;
   border-radius: 14px;
@@ -169,9 +172,11 @@ h2 {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.legend-title {
-  font-size: 0.88rem;
+.legend-label {
   color: #eff4ff;
+  font-size: 0.84rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .legend-items {
@@ -211,7 +216,7 @@ h2 {
   position: relative;
   width: var(--road-width);
   max-width: 100%;
-  height: min(var(--board-height), calc(100dvh - 330px));
+  height: var(--board-height);
   min-height: 320px;
   margin: 0 auto;
   overflow: hidden;
@@ -379,7 +384,7 @@ h2 {
     --shell-padding: 32px;
     --panel-max-width: 640px;
     --panel-padding: 28px;
-    --board-height: clamp(420px, 58dvh, 460px);
+    --board-height: clamp(400px, min(60dvh, 88vw), 460px);
   }
 
   .panel {
@@ -400,7 +405,7 @@ h2 {
     --shell-padding: 40px;
     --panel-max-width: 720px;
     --panel-padding: 32px;
-    --board-height: clamp(440px, 60dvh, 500px);
+    --board-height: clamp(420px, min(62dvh, 860px), 500px);
   }
 
   .status-text {
@@ -413,7 +418,7 @@ h2 {
     --shell-padding: 14px;
     --panel-padding: 16px;
     --road-width: 100%;
-    --board-height: clamp(330px, 50dvh, 440px);
+    --board-height: clamp(320px, min(60dvh, 96vw), 430px);
     --player-size: 74px;
     --item-size: 56px;
   }
@@ -442,8 +447,8 @@ h2 {
     gap: 6px;
   }
 
-  .legend-title {
-    font-size: 0.8rem;
+  .legend-label {
+    font-size: 0.78rem;
   }
 
   .legend-items {
@@ -456,7 +461,6 @@ h2 {
   }
 
   .game-board {
-    height: min(var(--board-height), calc(100dvh - 280px));
     min-height: 300px;
   }
 
@@ -496,7 +500,7 @@ h2 {
 @media (max-width: 400px) {
   :root {
     --panel-padding: 14px;
-    --board-height: clamp(320px, 48dvh, 420px);
+    --board-height: clamp(300px, min(56dvh, 96vw), 400px);
     --player-size: 70px;
     --item-size: 52px;
   }
