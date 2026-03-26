@@ -497,19 +497,22 @@ h2 {
 @media (max-width: 560px) {
   :root {
     --shell-padding: 14px;
-    --panel-padding: 16px;
+    --panel-padding: 14px;
     --road-width: 100%;
-    --board-height: clamp(320px, min(60dvh, 96vw), 430px);
+    --board-height: clamp(300px, 68dvh, 500px);
     --player-size: 74px;
     --item-size: 56px;
+    /* Reserve vertical room for top utility controls on phones. */
+    --mobile-top-chrome: max(68px, calc(env(safe-area-inset-top) + 68px));
   }
 
   .app-shell {
     align-items: stretch;
-    padding-top: max(68px, calc(env(safe-area-inset-top) + 68px));
+    padding-top: var(--mobile-top-chrome);
   }
 
   body.gameplay-active .app-shell {
+    padding-top: max(56px, calc(env(safe-area-inset-top) + 56px));
     padding-bottom: max(8px, env(safe-area-inset-bottom));
   }
 
@@ -533,12 +536,14 @@ h2 {
   }
 
   #game-screen {
-    height: min(100%, calc(100dvh - max(80px, calc(env(safe-area-inset-top) + 80px))));
-    max-height: calc(100dvh - max(80px, calc(env(safe-area-inset-top) + 80px)));
+    height: min(100%, calc(100dvh - var(--mobile-top-chrome)));
+    max-height: calc(100dvh - var(--mobile-top-chrome));
     overflow: hidden;
-    gap: 10px;
-    padding-top: 14px;
-    padding-bottom: 12px;
+    /* Keep core gameplay stack fixed and let the board claim extra height first. */
+    grid-template-rows: auto auto auto auto minmax(280px, 1fr) auto auto auto;
+    gap: 8px;
+    padding-top: 10px;
+    padding-bottom: 8px;
   }
 
   .hud {
@@ -548,8 +553,8 @@ h2 {
 
   .status-text,
   .help-text {
-    font-size: 0.9rem;
-    line-height: 1.35;
+    font-size: 0.84rem;
+    line-height: 1.3;
   }
 
   .status-text {
@@ -558,9 +563,9 @@ h2 {
 
   .app-footer {
     gap: 3px 8px;
-    font-size: 0.76rem;
-    line-height: 1.35;
-    padding-top: 7px;
+    font-size: 0.72rem;
+    line-height: 1.3;
+    padding-top: 5px;
   }
 
   .app-footer a {
@@ -568,25 +573,32 @@ h2 {
   }
 
   .legend {
-    padding: 6px 9px;
-    gap: 6px;
+    padding: 4px 7px;
+    gap: 5px;
   }
 
   .legend-label {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
   }
 
   .legend-items {
-    gap: 6px;
+    gap: 5px;
+    max-width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
   }
 
   .legend-pill {
-    padding: 5px 8px;
-    font-size: 0.8rem;
+    padding: 3px 7px;
+    font-size: 0.72rem;
+    flex: 0 0 auto;
   }
 
   .game-board {
-    min-height: 210px;
+    min-height: 280px;
     max-height: none;
   }
 
@@ -635,21 +647,35 @@ h2 {
 
   .help-text {
     margin: 0;
-    font-size: 0.84rem;
+    font-size: 0.78rem;
   }
 
   #game-screen .app-footer {
     margin-top: 0;
-    padding-top: 6px;
+    padding-top: 4px;
+  }
+
+  /* During active play, keep non-essential text available but less dominant. */
+  body.gameplay-active #game-screen .legend {
+    display: none;
+  }
+
+  body.gameplay-active #game-screen .help-text {
+    display: none;
+  }
+
+  body.gameplay-active #game-screen .app-footer {
+    display: none;
   }
 }
 
 @media (max-width: 400px) {
   :root {
     --panel-padding: 14px;
-    --board-height: clamp(180px, min(44dvh, 96vw), 360px);
+    --board-height: clamp(280px, 64dvh, 430px);
     --player-size: 70px;
     --item-size: 52px;
+    --mobile-top-chrome: max(62px, calc(env(safe-area-inset-top) + 62px));
   }
 
   #game-screen {
@@ -662,17 +688,17 @@ h2 {
   }
 
   .status-text {
-    font-size: 0.86rem;
+    font-size: 0.82rem;
   }
 
   .help-text {
-    font-size: 0.82rem;
+    font-size: 0.76rem;
     line-height: 1.3;
   }
 
   .legend {
-    padding: 6px 8px;
-    gap: 5px;
+    padding: 4px 6px;
+    gap: 4px;
   }
 
   .legend-items {
@@ -681,8 +707,8 @@ h2 {
   }
 
   .legend-pill {
-    padding: 4px 7px;
-    font-size: 0.76rem;
+    padding: 3px 6px;
+    font-size: 0.7rem;
   }
 
   .controls {
@@ -697,8 +723,8 @@ h2 {
 
   .app-footer {
     gap: 2px 6px;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     line-height: 1.3;
-    padding-top: 6px;
+    padding-top: 4px;
   }
 }
