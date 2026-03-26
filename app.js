@@ -359,6 +359,7 @@ function showScreen(screenToShow) {
   [setupScreen, gameScreen].forEach((screen) => {
     screen.classList.toggle('hidden', screen !== screenToShow);
   });
+  document.body.classList.toggle('gameplay-active', screenToShow === gameScreen);
 }
 
 function clearItems() {

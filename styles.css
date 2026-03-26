@@ -10,7 +10,7 @@
   --panel-max-width: 560px;
   --panel-padding: clamp(18px, 4vw, 24px);
   --road-width: 100%;
-  --board-height: clamp(360px, min(58dvh, 92vw), 440px);
+  --board-height: clamp(320px, min(58dvh, 92vw), 440px);
   --player-size: 82px;
   --item-size: 60px;
 }
@@ -26,6 +26,10 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   background: linear-gradient(180deg, #12192b 0%, #0a0e18 100%);
   color: var(--text);
+}
+
+body.gameplay-active {
+  overflow: hidden;
 }
 
 button,
@@ -82,7 +86,9 @@ input {
 }
 
 #game-screen {
+  grid-template-rows: auto auto auto auto minmax(0, 1fr) auto auto auto;
   gap: 12px;
+  text-align: center;
 }
 
 .hidden {
@@ -272,7 +278,8 @@ h2 {
   position: relative;
   width: var(--road-width);
   max-width: 100%;
-  height: var(--board-height);
+  height: 100%;
+  max-height: var(--board-height);
   min-height: 320px;
   margin: 0 auto;
   overflow: hidden;
@@ -502,6 +509,10 @@ h2 {
     padding-top: max(68px, calc(env(safe-area-inset-top) + 68px));
   }
 
+  body.gameplay-active .app-shell {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
   .utility-bar {
     top: max(10px, env(safe-area-inset-top));
     right: max(10px, var(--shell-padding));
@@ -522,7 +533,12 @@ h2 {
   }
 
   #game-screen {
+    height: min(100%, calc(100dvh - max(80px, calc(env(safe-area-inset-top) + 80px))));
+    max-height: calc(100dvh - max(80px, calc(env(safe-area-inset-top) + 80px)));
+    overflow: hidden;
     gap: 10px;
+    padding-top: 14px;
+    padding-bottom: 12px;
   }
 
   .hud {
@@ -534,6 +550,10 @@ h2 {
   .help-text {
     font-size: 0.9rem;
     line-height: 1.35;
+  }
+
+  .status-text {
+    min-height: 0;
   }
 
   .app-footer {
@@ -548,7 +568,7 @@ h2 {
   }
 
   .legend {
-    padding: 7px 10px;
+    padding: 6px 9px;
     gap: 6px;
   }
 
@@ -566,7 +586,8 @@ h2 {
   }
 
   .game-board {
-    min-height: 300px;
+    min-height: 210px;
+    max-height: none;
   }
 
   .board-overlay {
@@ -590,6 +611,9 @@ h2 {
 
   .controls {
     gap: 8px;
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
   }
 
   /* Compact movement controls without reducing tap target height. */
@@ -608,12 +632,22 @@ h2 {
   .stopped-actions {
     grid-template-columns: 1fr;
   }
+
+  .help-text {
+    margin: 0;
+    font-size: 0.84rem;
+  }
+
+  #game-screen .app-footer {
+    margin-top: 0;
+    padding-top: 6px;
+  }
 }
 
 @media (max-width: 400px) {
   :root {
     --panel-padding: 14px;
-    --board-height: clamp(300px, min(56dvh, 96vw), 400px);
+    --board-height: clamp(180px, min(44dvh, 96vw), 360px);
     --player-size: 70px;
     --item-size: 52px;
   }
