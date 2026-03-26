@@ -620,6 +620,7 @@ h2 {
 
   /* Compact movement controls without reducing tap target height. */
   .controls .control-button {
+    flex: 0 1 auto;
     min-width: 104px;
     padding: 10px 12px;
     font-size: 0.94rem;
