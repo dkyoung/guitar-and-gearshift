@@ -495,7 +495,7 @@ h2 {
     --shell-padding: 14px;
     --panel-padding: 14px;
     --road-width: 100%;
-    --board-height: clamp(300px, 68dvh, 500px);
+    --board-height: clamp(360px, 78dvh, 640px);
     --player-size: 74px;
     --item-size: 56px;
     /* Reserve vertical room for top utility controls on phones. */
@@ -533,7 +533,7 @@ h2 {
 
   #game-screen {
     /* Keep a natural page flow while still giving the board priority on mobile. */
-    grid-template-rows: auto auto auto auto minmax(280px, 1fr) auto auto auto;
+    grid-template-rows: auto auto auto auto minmax(340px, 1fr) auto auto auto;
     gap: 8px;
     padding-top: 10px;
     padding-bottom: 8px;
@@ -591,7 +591,7 @@ h2 {
   }
 
   .game-board {
-    min-height: 280px;
+    min-height: 340px;
     max-height: none;
   }
 
@@ -615,15 +615,15 @@ h2 {
   }
 
   .controls {
-    gap: 8px;
+    gap: 5px;
   }
 
   /* Compact movement controls without reducing tap target height. */
   .controls .control-button {
     flex: 0 1 auto;
-    min-width: 104px;
-    padding: 10px 12px;
-    font-size: 0.94rem;
+    min-width: 88px;
+    padding: 8px 9px;
+    font-size: 0.88rem;
   }
 
   .stopped-actions {
@@ -657,14 +657,15 @@ h2 {
 @media (max-width: 400px) {
   :root {
     --panel-padding: 14px;
-    --board-height: clamp(280px, 64dvh, 430px);
+    --board-height: clamp(340px, 74dvh, 560px);
     --player-size: 70px;
     --item-size: 52px;
     --mobile-top-chrome: max(62px, calc(env(safe-area-inset-top) + 62px));
   }
 
   #game-screen {
-    gap: 8px;
+    gap: 7px;
+    grid-template-rows: auto auto auto auto minmax(320px, 1fr) auto auto auto;
   }
 
   .hud {
@@ -697,13 +698,13 @@ h2 {
   }
 
   .controls {
-    gap: 6px;
+    gap: 4px;
   }
 
   .controls .control-button {
-    min-width: 96px;
-    padding: 9px 10px;
-    font-size: 0.88rem;
+    min-width: 80px;
+    padding: 8px;
+    font-size: 0.82rem;
   }
 
   .app-footer {
