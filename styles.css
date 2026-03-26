@@ -28,10 +28,6 @@ body {
   color: var(--text);
 }
 
-body.gameplay-active {
-  overflow: hidden;
-}
-
 button,
 input {
   font: inherit;
@@ -536,10 +532,7 @@ h2 {
   }
 
   #game-screen {
-    height: min(100%, calc(100dvh - var(--mobile-top-chrome)));
-    max-height: calc(100dvh - var(--mobile-top-chrome));
-    overflow: hidden;
-    /* Keep core gameplay stack fixed and let the board claim extra height first. */
+    /* Keep a natural page flow while still giving the board priority on mobile. */
     grid-template-rows: auto auto auto auto minmax(280px, 1fr) auto auto auto;
     gap: 8px;
     padding-top: 10px;
@@ -623,22 +616,14 @@ h2 {
 
   .controls {
     gap: 8px;
-    position: sticky;
-    bottom: 0;
-    z-index: 2;
   }
 
   /* Compact movement controls without reducing tap target height. */
   .controls .control-button {
+    flex: 0 1 auto;
     min-width: 104px;
     padding: 10px 12px;
     font-size: 0.94rem;
-  }
-
-  .control-button,
-  .secondary-button,
-  .primary-button {
-    width: 100%;
   }
 
   .stopped-actions {
